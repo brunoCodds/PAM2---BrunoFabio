@@ -28,6 +28,13 @@ export default function HomeScreen({ navigation, route }) {
         )}
       />
 
+      <TouchableOpacity
+        style={styles.botaoJogo}
+        onPress={() => navigation.navigate('Tetris')}
+      >
+        <Text style={styles.botaoTexto}>🎮 Jogar Tetris</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity style={styles.botao} onPress={handleSair}>
         <Text style={styles.botaoTexto}>Sair</Text>
       </TouchableOpacity>
@@ -88,13 +95,21 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 2,
   },
+  botaoJogo: {
+    backgroundColor: '#7c3aed',
+    borderRadius: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    alignItems: 'center',
+    marginTop: 8,
+  },
   botao: {
     backgroundColor: '#d32f2f',
     borderRadius: 10,
     paddingVertical: 14,
     paddingHorizontal: 32,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 12,
     marginBottom: 24,
   },
   botaoTexto: {
