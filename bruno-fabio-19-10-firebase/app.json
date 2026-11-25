@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "login-bruno-fabio-27-7",
-    "slug": "login-bruno-fabio-27-7",
+    "name": "FeedbackHub",
+    "slug": "feedbackhub",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -18,6 +18,8 @@
       }
     },
     "web": {
+      "bundler": "metro",
+      "output": "single",
       "favicon": "./assets/favicon.png"
     }
   }

@@ -1,0 +1,92 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // Nome atual do usuário, lido do perfil salvo no Firestore.
+    function profileName(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data.name;
+    }
+
+    // ---------------------------------------------------------------
+    // users: cada pessoa lê e edita somente o próprio perfil.
+    // ---------------------------------------------------------------
+    match /users/{uid} {
+
+      function validProfile(d) {
+        return d.keys().hasOnly(['uid', 'name', 'email', 'bio', 'createdAt'])
+          && d.keys().hasAll(['uid', 'name', 'email', 'bio', 'createdAt'])
+          && d.uid == uid
+          && d.name is string && d.name.size() >= 2 && d.name.size() <= 60
+          && d.email is string
+          && d.bio is string && d.bio.size() <= 300
+          && d.createdAt is timestamp;
+      }
+
+      allow read: if isOwner(uid);
+
+      allow create: if isOwner(uid)
+        && validProfile(request.resource.data)
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.createdAt == request.time;
+
+      // Não é possível trocar e-mail, uid nem data de criação.
+      allow update: if isOwner(uid)
+        && validProfile(request.resource.data)
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.createdAt == resource.data.createdAt;
+
+      allow delete: if false;
+    }
+
+    // ---------------------------------------------------------------
+    // posts: leitura pública; escrita somente pelo autor autenticado.
+    // ---------------------------------------------------------------
+    match /posts/{postId} {
+
+      function validPost(d) {
+        return d.keys().hasOnly(['title', 'description', 'authorId', 'authorName', 'createdAt', 'updatedAt'])
+          && d.keys().hasAll(['title', 'description', 'authorId', 'authorName', 'createdAt', 'updatedAt'])
+          && d.title is string && d.title.size() >= 3 && d.title.size() <= 100
+          && d.description is string && d.description.size() >= 10 && d.description.size() <= 1000
+          && d.authorId is string
+          && d.authorName is string && d.authorName.size() >= 1 && d.authorName.size() <= 60
+          && d.createdAt is timestamp
+          && d.updatedAt is timestamp;
+      }
+
+      allow read: if true;
+
+      // O nome do autor precisa ser o do perfil dele (não dá para assinar como outra pessoa).
+      allow create: if signedIn()
+        && validPost(request.resource.data)
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.authorName == profileName(request.auth.uid)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+
+      // Somente o autor edita. authorId e createdAt são imutáveis.
+      // authorName só muda para refletir o nome atual do perfil.
+      // updatedAt só avança quando o conteúdo é editado.
+      allow update: if signedIn()
+        && resource.data.authorId == request.auth.uid
+        && validPost(request.resource.data)
+        && request.resource.data.authorId == resource.data.authorId
+        && request.resource.data.createdAt == resource.data.createdAt
+        && (request.resource.data.authorName == resource.data.authorName
+            || request.resource.data.authorName == profileName(request.auth.uid))
+        && (request.resource.data.updatedAt == request.time
+            || request.resource.data.updatedAt == resource.data.updatedAt);
+
+      allow delete: if signedIn() && resource.data.authorId == request.auth.uid;
+    }
+  }
+}
